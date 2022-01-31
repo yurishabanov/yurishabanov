@@ -1,0 +1,4 @@
+- 👋 Hi, I’m @yurishabanov
+- 👀 I'm currently studying Finance at Higher School of Economics and I am interested in applied finance on python
+- 🤗 I am coding my first high frequency trading strategies and searching for inspiration
+- 🤩 Reach me out, I am thrilled to get new friends 
