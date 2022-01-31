@@ -1,0 +1,96 @@
+import yfinance as yf
+import pandas as pd
+from yahoofinancials import YahooFinancials
+from datetime import date, timedelta
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+stocks = ['V', 'C', 'UAL', 'WDC', 'BAC', 'CMCSA', 'KO', 'PFE'] # user can choose any stocks they prefer
+
+my_columns = ['Ticker', 'Industry', 'Beta']
+data = pd.DataFrame(columns = my_columns)
+data = pd.DataFrame()
+
+#extraction of beta data
+for stock in stocks: 
+    info = yf.Ticker(stock).info
+    industry = info.get('industry')
+    beta = info.get('beta')
+    data = data.append(
+                   pd.Series([stock, industry, beta],
+                            index = my_columns), ignore_index = True) 
+### MRP AND RF ARE TO BE UPDATED PRIOR TO RUNNING THE CODE!!!!!!!!!!!!!
+
+mrp = 5.5 #market risk premium
+rf = 1.78 #risk free rate of return
+
+#creation of dataframe with data for ticker, industry of the company return estimated
+#beta and the expected return
+returns = []
+for beta in data['Beta']:
+    try:
+        returns.append(rf + beta * mrp)
+    except:
+        returns.append('')
+        
+data['E[R]'] = returns #addition of calculated expected returns to the 'working' data frame
+
+def volatility(ticker):
+    '''
+    A function calculates daily volatility based on previous annum day volatilities availible
+    Input variables: ticker (string variable which defines the ticker of stock you want to have volatility of)
+    Output variables: float variable of annual average daily volatility
+    '''
+    # set stock ticker symbol
+    stock_symbol = ticker
+
+    # set date range for historical prices
+    end_time = date.today()
+    start_time = end_time - timedelta(days=365)
+
+    # reformat date range
+    end = end_time.strftime('%Y-%m-%d')
+    start = start_time.strftime('%Y-%m-%d')
+
+    # get daily stock prices over date range
+    json_prices = YahooFinancials(stock_symbol
+    ).get_historical_price_data(start, end, 'daily')
+    prices = pd.DataFrame(json_prices[stock_symbol]
+    ['prices'])[['formatted_date', 'close']]
+
+    # sort dates in descending order
+    prices.sort_index(ascending=False, inplace=True)
+    # calculate daily logarithmic return
+    prices['returns'] = (np.log(prices.close /
+    prices.close.shift(-1)))
+
+    # calculate daily standard deviation of returns
+    daily_std = np.std(prices.returns)
+
+    # annualized daily standard deviation
+    std = daily_std * 252 ** 0.5
+    return std
+    
+#calculate volatilities
+vol = []
+for i in range(len(data)):
+    try:
+        vol.append(volatility(data['Ticker'][i]))
+    except:
+        vol.append('')
+data['Volatility'] = vol #addition of calculated volatilities to the existing data frame
+
+#make scatter plot for the sake of visualisation
+z = list(data['Volatility'][1:])
+y = list(data['E[R]'][1:])
+n = list(data['Ticker'][1:])
+
+fig, ax = plt.subplots()
+ax.scatter(z, y)
+
+for i, txt in enumerate(n):
+    ax.annotate(txt, (z[i], y[i]))
+plt.xlabel('Volatility, %')
+plt.ylabel('Expected return, %')
+plt.title('CAPM predictions on stocks expected returns and volatilitites')
